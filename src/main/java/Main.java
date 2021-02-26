@@ -14,8 +14,14 @@ public class Main {
     final static File inputFile = new File("input.xlsx");
 
     public static void main(String[] args) {
+        int cores = Runtime.getRuntime().availableProcessors();
+
+        ExecutorService service = new ThreadPoolExecutor(cores / 2, cores,
+                0L, TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<Runnable>());
+
         CompletableFuture<Integer> cf = new CompletableFuture<>();
-        BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(16);
+        BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(cores * 2);
 
         POIFSFileSystem fileSystem;
         EncryptionInfo info;
@@ -29,6 +35,8 @@ public class Main {
             e.printStackTrace();
         }
 
+        Decryptor finalDecryptor = decryptor;
+
         Runnable producer = new Runnable() {
             final static int MAX_SIZE = Integer.MAX_VALUE;
 
@@ -37,11 +45,9 @@ public class Main {
                 for (int i = 0; i < MAX_SIZE; ++i) {
                     if (!Thread.interrupted()) {
                         try {
-//                        queue.offer(i, 10000, TimeUnit.SECONDS);
                             queue.put(i);
                         } catch (InterruptedException e) {
                             break;
-//                            e.printStackTrace();
                         }
                     }
                     print("Adding number: " + i);
@@ -50,7 +56,6 @@ public class Main {
             }
         };
 
-        Decryptor finalDecryptor = decryptor;
         Runnable consumer = new Runnable() {
             final Decryptor d = finalDecryptor;
 
@@ -77,19 +82,11 @@ public class Main {
             }
         };
 
-        int cores = Runtime.getRuntime().availableProcessors();
-
-        ExecutorService service = new ThreadPoolExecutor(cores / 2, cores,
-                0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>());
-
         service.execute(producer);
-
         for (int i = 0; i < cores - 1; ++i) {
             service.execute(consumer);
 
         }
-//        service.execute(consumer);
 
         Integer result = 0;
         try {
@@ -103,17 +100,9 @@ public class Main {
             e.printStackTrace();
         }
         System.out.println(result);
-
-//        Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
-//        System.out.println(threadSet);
-
-//        System.out.println(Runtime.getRuntime().availableProcessors());
-//        shutdownAndAwaitTermination(service);
     }
 
     static void print(Object output) {
-        System.out.println(
-                String.format("%s: %s - %s", LocalDateTime.now(), Thread.currentThread().getName(), output)
-        );
+        System.out.printf("%s: %s - %s%n", LocalDateTime.now(), Thread.currentThread().getName(), output);
     }
 }

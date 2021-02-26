@@ -12,18 +12,14 @@ import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
 public class Main {
-
     final static File inputFile = new File("input.xlsx");
 
     public static void main(String[] args) {
         int cores = Runtime.getRuntime().availableProcessors();
 
-        ExecutorService service = new ThreadPoolExecutor(cores, cores,
-                0L, TimeUnit.MILLISECONDS,
-                new LinkedBlockingQueue<Runnable>());
-
+        ExecutorService service = new ThreadPoolExecutor(cores, cores, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
         CompletableFuture<String> cf = new CompletableFuture<>();
-        BlockingQueue<String> queue = new ArrayBlockingQueue<>(cores * 2);
+        BlockingQueue<String> passwordQueue = new ArrayBlockingQueue<>(cores * 2);
 
         POIFSFileSystem fileSystem;
         EncryptionInfo info;
@@ -46,7 +42,7 @@ public class Main {
         IntStream.range(65, 90).forEach(i -> characters.add((char) i));
         // Upper case
         IntStream.range(97, 122).forEach(i -> characters.add((char) i));
-        
+
         Character[] charSet = getCharSet(characters);
         int charSetSize = charSet.length;
 
@@ -64,7 +60,7 @@ public class Main {
                     for (int j = 0; j < t.size(); j++) {
                         String pass = t.get(j);
                         try {
-                            queue.offer(pass, 10000, TimeUnit.SECONDS);
+                            passwordQueue.offer(pass, 12, TimeUnit.HOURS);
                         } catch (InterruptedException ignored) {
                             break outerloop;
                         }
@@ -80,7 +76,7 @@ public class Main {
             public void run() {
                 while (!Thread.interrupted()) {
                     try {
-                        String password = queue.take();
+                        String password = passwordQueue.take();
                         print("Read number: " + password);
                         Instant start = Instant.now();
                         d.verifyPassword(password);
@@ -95,14 +91,12 @@ public class Main {
                         break;
                     }
                 }
-
             }
         };
 
         service.execute(producer);
         for (int i = 0; i < cores - 1; ++i) {
             service.execute(consumer);
-
         }
 
         String result = "";
@@ -111,7 +105,7 @@ public class Main {
             result = cf.get();
             Instant finish = Instant.now();
             long timeElapsed = Duration.between(start, finish).toMillis();
-            System.out.println("Łączny czas: " + timeElapsed);
+            System.out.println("Total time elapsed: " + timeElapsed);
             service.shutdownNow();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();

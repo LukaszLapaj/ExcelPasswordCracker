@@ -75,10 +75,10 @@ public class Main {
         return () -> {
             generatorLoop:
             for (int i = minLen; i < maxLen; ++i) {
-                ArrayList<String> t = new ArrayList<>();
-                t.addAll(generatePasswordsForDesiredLength(charSet, i, "", charSetSize));
-                for (int j = 0; j < t.size(); j++) {
-                    String pass = t.get(j);
+                ArrayList<String> passwords = new ArrayList<>();
+                passwords.addAll(generatePasswordsForDesiredLength(charSet, i, "", charSetSize));
+                for (int j = 0; j < passwords.size(); j++) {
+                    String pass = passwords.get(j);
                     try {
                         passwordQueue.offer(pass, 12, TimeUnit.HOURS);
                     } catch (InterruptedException ignored) {

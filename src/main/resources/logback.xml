@@ -1,0 +1,23 @@
+<configuration>
+	<jmxConfigurator />
+
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+			<layout class="ch.qos.logback.classic.PatternLayout">
+				<Pattern>%.-1level %d{yyMMdd} %d{HHmmss.SSS} [%thread] %logger{0} - %msg%n</Pattern>
+			</layout>
+		</encoder>
+	</appender>
+
+	<appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>50000</queueSize>
+		<discardingThreshold>0</discardingThreshold>
+		<appender-ref ref="CONSOLE" />
+	</appender>
+
+	<root>
+		<level value="TRACE" />
+		<appender-ref ref="ASYNC" />
+	</root>
+
+</configuration>

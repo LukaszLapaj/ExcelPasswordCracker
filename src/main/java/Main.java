@@ -14,18 +14,15 @@ import java.util.concurrent.*;
 import java.util.stream.IntStream;
 
 public class Main {
-    final static File inputFile = new File("input.xlsx");
-
     public static void main(String[] args) {
-        // Character set for cracking
-        ArrayList<Character> characters = new ArrayList<>();
-        // Numbers
-        IntStream.range(48, 58).forEach(i -> characters.add((char) i));
-        // Lower case
-        IntStream.range(65, 91).forEach(i -> characters.add((char) i));
-        // Upper case
-        IntStream.range(97, 123).forEach(i -> characters.add((char) i));
-        Character[] charSet = getCharSet(characters);
+        String fileToCrack = (args.length > 0 && args[1] != null) ? args[1] : "input.xlsx";
+        final File inputFile = new File(fileToCrack);
+        String crackedPassword = crackPassword(inputFile);
+        System.out.println("Password found: " + crackedPassword);
+    }
+
+    public static String crackPassword(File inputFile) {
+        Character[] charSet = crackingCharacterSet();
 
         // Parameters
         final int minPasswordLength = 2;
@@ -38,7 +35,7 @@ public class Main {
         BlockingQueue<String> passwordQueue = new LinkedBlockingQueue<>(threadCount * 2);
 
         // Runnables to execute
-        final Decryptor excelDecryptor = getDecryptor();
+        final Decryptor excelDecryptor = getDecryptor(inputFile);
         Runnable producer = passwordProvider(charSet, passwordQueue, minPasswordLength, maxPasswordLength);
         Runnable consumer = passwordCracker(cf, passwordQueue, excelDecryptor);
 
@@ -46,7 +43,21 @@ public class Main {
         executeRunnableDesiredTimes(threadCount - 1, threadPoolExecutor, consumer);
 
         String result = crackPassword(threadPoolExecutor, cf);
-        System.out.println("Password found: " + result);
+        return result;
+    }
+
+    private static Character[] crackingCharacterSet() {
+        // Character set for cracking
+        ArrayList<Character> characters = new ArrayList<>();
+        // Lower case
+        IntStream.range(97, 123).forEach(i -> characters.add((char) i));
+        // Upper case
+        IntStream.range(65, 91).forEach(i -> characters.add((char) i));
+        // Numbers
+        IntStream.range(48, 58).forEach(i -> characters.add((char) i));
+
+        Character[] charSet = getCharSet(characters);
+        return charSet;
     }
 
     private static String crackPassword(ExecutorService service, CompletableFuture<String> cf) {
@@ -55,8 +66,8 @@ public class Main {
             Instant start = Instant.now();
             result = cf.get();
             Instant finish = Instant.now();
-            long timeElapsed = Duration.between(start, finish).toMillis();
-            System.out.println("Total time elapsed: " + timeElapsed);
+            long timeElapsed = Duration.between(start, finish).toSeconds();
+            System.out.println("Total time elapsed: " + timeElapsed + "s");
             service.shutdownNow();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
@@ -107,7 +118,7 @@ public class Main {
         };
     }
 
-    private static Decryptor getDecryptor() {
+    private static Decryptor getDecryptor(File inputFile) {
         POIFSFileSystem fileSystem;
         EncryptionInfo info;
         Decryptor decryptor = null;
